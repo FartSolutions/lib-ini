@@ -25,7 +25,7 @@
 #define _INI_H_
 
 #if _WIN32
-#   if INI_DLL
+#   ifdef INI_DLL
 #       if INI_DLL_EXPORT
 #           define INI_API __declspec(dllexport)
 #       else

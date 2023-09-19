@@ -23,10 +23,9 @@
 */
 #include "ini.h"
 
-#include <sstream>
 #include <fstream>
+#include <algorithm>
 #include <sys/stat.h>
-#include <regex>
 
 #pragma warning(disable : 4018)
 
@@ -67,12 +66,28 @@ namespace
 		}
 	}
 
-	std::vector<std::string> split(const std::string& input, const std::string& regex)
+	std::vector<std::string> split(std::string str, std::string delimiter)
 	{
-		// passing -1 as the submatch index parameter performs splitting
-		std::regex re(regex);
-		std::sregex_token_iterator first{ input.begin(), input.end(), re, -1 }, last;
-		return { first, last };
+		std::vector<std::string> result;
+		uint64_t pos{ 0 };
+		uint64_t delimiter_pos{ 0 };
+
+		while ((delimiter_pos = str.find(delimiter, pos)) != std::string::npos)
+		{
+			std::string token = str.substr(pos, delimiter_pos - pos);
+			char* chr_token = new char[token.size() + 1];
+			memcpy(chr_token, token.data(), token.size());
+			chr_token[token.size()] = '\0';
+			result.push_back(chr_token);
+			pos = delimiter_pos + delimiter.size();
+		}
+
+		if (pos < str.size())
+		{
+			result.push_back(str.substr(pos, str.size() - pos));
+		}
+
+		return result;
 	}
 } // anonymous
 
@@ -134,8 +149,8 @@ int INIFile::LoadFile(std::string filepath)
 
 int INIFile::SaveFile(std::string filepath)
 {
-	std::string out_filepath = filepath.c_str();
-	if (!filepath.empty()) out_filepath = _filepath;
+	std::string out_filepath = filepath;
+	if (filepath.empty()) out_filepath = _filepath;
 	std::fstream file(out_filepath.c_str(), std::ios::out);
 
 	if (file.is_open())
@@ -169,7 +184,7 @@ INIFile::INICat& INIFile::operator[](const std::string kat)
 	int64_t kat_index{ -1 };
 	for (int64_t i{ 0 }; i < _categories.size(); i++)
 	{
-		if (_categories[i].Name == kat)
+		if (_categories[i].Name == _kat)
 		{
 			kat_index = i;
 		}
@@ -178,7 +193,7 @@ INIFile::INICat& INIFile::operator[](const std::string kat)
 	if (kat_index == -1)
 	{
 		INICat kategorie{};
-		kategorie.Name = kat.c_str();
+		kategorie.Name = _kat.c_str();
 		_categories.push_back(kategorie);
 		kat_index = _categories.size() - 1;
 	}
@@ -188,12 +203,12 @@ INIFile::INICat& INIFile::operator[](const std::string kat)
 
 std::string& INIFile::INICat::operator[](const std::string key)
 {
-	std::string key_name = to_lower_case(std::string(key.c_str())).c_str();
+	std::string _key = to_lower_case(std::string(key.c_str())).c_str();
 
 	int64_t key_index{ -1 };
 	for (int64_t i{ 0 }; i < Keys.size(); i++)
 	{
-		if (Keys[i].Name == key)
+		if (Keys[i].Name == _key)
 		{
 			key_index = i;
 		}
@@ -201,9 +216,9 @@ std::string& INIFile::INICat::operator[](const std::string key)
 
 	if (key_index == -1)
 	{
-		INIKey _key{};
-		_key.Name = key;
-		Keys.push_back(_key);
+		INIKey i_key{};
+		i_key.Name = _key;
+		Keys.push_back(i_key);
 		key_index = Keys.size() - 1;
 	}
 
